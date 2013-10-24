@@ -6,6 +6,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import org.gitlab.api.GitlabAPI;
 import org.gitlab.api.models.GitlabCommit;
 import org.gitlab.api.models.GitlabMergeRequest;
@@ -16,27 +17,50 @@ public class GitlabMergeRequestWrapper {
 
     private static final Logger _logger = Logger.getLogger(GitlabMergeRequestWrapper.class.getName());
     private final Integer _id;
+    private final Integer _iid;
     private final String _author;
     private String _source;
     private String _target;
+    private String _sourceUrl;
 
     private boolean _shouldRun = false;
 
-    transient private GitlabProject _project;
+    transient private GitlabProject _targetProject;
     transient private GitlabMergeRequestBuilder _builder;
 
 
-    GitlabMergeRequestWrapper(GitlabMergeRequest mergeRequest, GitlabMergeRequestBuilder builder, GitlabProject project) {
+    GitlabMergeRequestWrapper(GitlabMergeRequest mergeRequest, GitlabMergeRequestBuilder builder, GitlabProject targetProject) {
         _id = mergeRequest.getId();
+        _iid = mergeRequest.getIid();
         _author = mergeRequest.getAuthor().getUsername();
         _source = mergeRequest.getSourceBranch();
         _target = mergeRequest.getTargetBranch();
-        _project = project;
+        _targetProject = targetProject;
         _builder = builder;
+        
+        GitlabProject sourceProject = retriveSourceProject(mergeRequest.getSourceProjectId());
+        _sourceUrl = retriveSourceProjectUrl(sourceProject) + ".git";
+    }
+
+    private GitlabProject retriveSourceProject(Integer sourceProjectId) {
+        try {
+            return _builder.getGitlab().get().getProject(sourceProjectId);
+        } catch (IOException e) {
+            _logger.log(Level.SEVERE, "Could not retrieve project.", e);
+            throw new IllegalStateException("Could not retrieve project.", e);
+        }
+    }
+
+    private String retriveSourceProjectUrl(GitlabProject _sourceProject) {
+        try {
+            return _builder.getGitlab().get().getUrl(_sourceProject.getPathWithNamespace()).toString();
+        } catch (IOException e) {
+            return null;
+        }
     }
 
     public void init(GitlabMergeRequestBuilder builder, GitlabProject project) {
-        _project = project;
+        _targetProject = project;
         _builder = builder;
     }
 
@@ -63,7 +87,7 @@ public class GitlabMergeRequestWrapper {
                 }
             }
         } catch (IOException e) {
-            _logger.log(Level.SEVERE, "Failed to fetch commits for Merge Request " + gitlabMergeRequest.getId());
+            _logger.log(Level.SEVERE, "Failed to fetch commits for Merge Request id:" + gitlabMergeRequest.getId() + ", iid:" + gitlabMergeRequest.getIid());
         }
 
         if (_shouldRun) {
@@ -113,6 +137,10 @@ public class GitlabMergeRequestWrapper {
         return _id;
     }
 
+    public Integer getIid() {
+        return _iid;
+    }
+
     public String getAuthor() {
         return _author;
     }
@@ -125,10 +153,14 @@ public class GitlabMergeRequestWrapper {
         return _target;
     }
 
+    public String getSourceUrl() {
+        return _sourceUrl;
+    }
+
     public GitlabNote createNote(String message) {
         GitlabMergeRequest mergeRequest = new GitlabMergeRequest();
         mergeRequest.setId(_id);
-        mergeRequest.setProjectId(_project.getId());
+        mergeRequest.setTargetProjectId(_targetProject.getId());
 
         try {
             return _builder.getGitlab().get().createNote(mergeRequest, message);
@@ -147,5 +179,4 @@ public class GitlabMergeRequestWrapper {
             _logger.log(Level.INFO, message);
         }
     }
-
 }

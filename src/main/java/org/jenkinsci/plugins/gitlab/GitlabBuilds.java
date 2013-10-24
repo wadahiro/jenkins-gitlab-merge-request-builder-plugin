@@ -20,7 +20,8 @@ public class GitlabBuilds {
     }
 
     public String build(GitlabMergeRequestWrapper mergeRequest) {
-        GitlabCause cause = new GitlabCause(mergeRequest.getId(), mergeRequest.getSource(), mergeRequest.getTarget());
+        GitlabCause cause = new GitlabCause(mergeRequest.getId(), mergeRequest.getIid(),
+                mergeRequest.getSource(), mergeRequest.getTarget(), mergeRequest.getSourceUrl());
 
         QueueTaskFuture<?> build = _trigger.startJob(cause);
         if (build == null) {
@@ -49,7 +50,7 @@ public class GitlabBuilds {
         }
 
         try {
-            build.setDescription("<a href=\"" + _repository.getMergeRequestUrl(cause.getMergeRequestId()) + "\">" + getOnStartedMessage(cause) + "</a>");
+            build.setDescription("<a href=\"" + _repository.getMergeRequestUrl(cause.getMergeRequestIid()) + "\">" + getOnStartedMessage(cause) + "</a>");
         } catch (IOException e) {
             _logger.log(Level.SEVERE, "Can't update build description", e);
         }

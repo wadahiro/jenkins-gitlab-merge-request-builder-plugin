@@ -1,29 +1,35 @@
 package org.jenkinsci.plugins.gitlab;
 
+import static org.jenkinsci.plugins.gitlab.GitlabConstants.*; 
+
+import hudson.Extension;
+import hudson.model.Item;
+import hudson.model.ParameterValue;
+import hudson.model.AbstractProject;
+import hudson.model.ParameterDefinition;
+import hudson.model.ParametersAction;
+import hudson.model.ParametersDefinitionProperty;
+import hudson.model.StringParameterValue;
+import hudson.model.queue.QueueTaskFuture;
+import hudson.triggers.Trigger;
+import hudson.triggers.TriggerDescriptor;
+import hudson.triggers.TimerTrigger;
+import hudson.util.FormValidation;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import antlr.ANTLRException;
-import hudson.Extension;
-import hudson.model.AbstractProject;
-import hudson.model.Item;
-import hudson.model.ParameterDefinition;
-import hudson.model.ParameterValue;
-import hudson.model.ParametersAction;
-import hudson.model.ParametersDefinitionProperty;
-import hudson.model.StringParameterValue;
-import hudson.model.queue.QueueTaskFuture;
-import hudson.triggers.TimerTrigger;
-import hudson.triggers.Trigger;
-import hudson.triggers.TriggerDescriptor;
-import hudson.util.FormValidation;
+
 import net.sf.json.JSONObject;
+
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
+
+import antlr.ANTLRException;
 
 public final class GitlabBuildTrigger extends Trigger<AbstractProject<?, ?>> {
     private static final Logger _logger = Logger.getLogger(GitlabBuildTrigger.class.getName());
@@ -58,9 +64,10 @@ public final class GitlabBuildTrigger extends Trigger<AbstractProject<?, ?>> {
     public QueueTaskFuture<?> startJob(GitlabCause cause) {
         Map<String, ParameterValue> values = getDefaultParameters();
 
-        values.put("gitlabMergeRequestId", new StringParameterValue("gitlabMergeRequestId", String.valueOf(cause.getMergeRequestId())));
-        values.put("gitlabSourceBranch", new StringParameterValue("gitlabSourceBranch", cause.getSourceBranch()));
-        values.put("gitlabTargetBranch", new StringParameterValue("gitlabTargetBranch", cause.getTargetBranch()));
+        values.put(MERGE_REQUEST_ID_KEY, new StringParameterValue(MERGE_REQUEST_ID_KEY, String.valueOf(cause.getMergeRequestId())));
+        values.put(SOURCE_BRANCH_KEY, new StringParameterValue(SOURCE_BRANCH_KEY, cause.getSourceBranch()));
+        values.put(TARGET_BRANCH_KEY, new StringParameterValue(TARGET_BRANCH_KEY, cause.getTargetBranch()));
+        values.put(SOURCE_URL_KEY, new StringParameterValue(SOURCE_URL_KEY, cause.getSourceUrl()));
 
         List<ParameterValue> listValues = new ArrayList<ParameterValue>(values.values());
         return this.job.scheduleBuild2(0, cause, new ParametersAction(listValues));
